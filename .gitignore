@@ -1,0 +1,14 @@
+# temporary files
+*~
+*.swp
+
+# hidden stuff
+.*
+!.dockerignore
+!.editorconfig
+!.gitignore
+!.gitkeep
+!.yamllint
+
+# project specific
+*.zip

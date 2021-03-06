@@ -90,7 +90,7 @@ def remove_user(uuid):
 
 
 def send_update(user, method, area):
-    data: dict = {
+    data = {
         "method": method,
         "user": user
     }

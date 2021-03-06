@@ -13,7 +13,6 @@ db: Optional[Database] = None
 
 # Mqtt Client
 from paho.mqtt import publish
-from json import dumps
 
 
 @server.before_request
@@ -53,19 +52,19 @@ def find_user_by_area(area):
 def update_user(uuid):
     result = None
     if data := request.json:
-        delta:int = data.get('delta', -1000)
-        area:str = data.get('area',"")
+        delta: int = data.get('delta', -1000)
+        area: str = data.get('area', "")
         result = db.update_user(
             uuid=uuid,
             delta=delta,
             area=area
         )
-        old_area:str = result.get('old_area',"")
+        old_area: str = result.get('old_area', "")
         if old_area != "":
-            send_update(user={'uuid':uuid},method='delete',area=result.get('old_area'))
-            send_update(jsonify(result).get_json(),'create',area)
+            send_update(user={'uuid': uuid}, method='delete', area=result.get('old_area'))
+            send_update(jsonify(result).get_json(), 'create', area)
         else:
-            send_update(jsonify(result).get_json(),'update',result.get('area'))
+            send_update(jsonify(result).get_json(), 'update', result.get('area'))
         print(jsonify(result).get_json())
     return jsonify(result), 200 if result else 404
 
@@ -75,9 +74,9 @@ def create_user(uuid):
     result = None
     if find_user(uuid)[1] == 404:
         if data := request.json:
-            area:str = data.get('area',"")
+            area: str = data.get('area', "")
             result = db.insert_user(uuid, area=area)
-            send_update(jsonify(result).get_json(),'create',area)
+            send_update(jsonify(result).get_json(), 'create', area)
     return jsonify(result), 201 if result else 409
 
 
@@ -86,13 +85,13 @@ def remove_user(uuid):
     result = None
     if find_user(uuid)[1] == 200:
         result = db.delete_user(uuid)
-        send_update(user={'uuid':uuid},method='delete',area=result.get('area'))
+        send_update(user={'uuid': uuid}, method='delete', area=result.get('area'))
     return jsonify(result), 200 if result else 404
 
 
 def send_update(user, method, area):
-    data:dict={
-        "method":method,
-        "user":user
+    data: dict = {
+        "method": method,
+        "user": user
     }
-    publish.single(topic=area,payload=str(data),hostname="mosquitto",port=1883, keepalive=1)
+    publish.single(topic=area, payload=str(data), hostname="mosquitto", port=1883, keepalive=1)

@@ -11,6 +11,10 @@ server = Blueprint('server', __name__)
 # Global variables
 db: Optional[Database] = None
 
+# Mqtt Client
+from paho.mqtt import publish
+from json import dumps
+
 
 @server.before_request
 def before_request():
@@ -32,15 +36,16 @@ def find_all_users():
     return jsonify(result), 200 if result else 404
 
 
-@find_all_users.support('text/html')
-def find_all_users_html():
-    result = db.find_all_users()
-    return render_template('table_collection.html', title='Users', name='users', collection=result)
-
-
 @server.route('/users/<string:uuid>', methods=['GET'])
 def find_user(uuid):
     result = db.find_user(uuid)
+    return jsonify(result), 200 if result else 404
+
+
+@server.route('/users/<string:area>', methods=['GET'])
+@accept_fallback
+def find_user_by_area(area):
+    result = db.find_user_by_area(area)
     return jsonify(result), 200 if result else 404
 
 
@@ -48,56 +53,46 @@ def find_user(uuid):
 def update_user(uuid):
     result = None
     if data := request.json:
+        delta:int = data.get('delta', -1000)
+        area:str = data.get('area',"")
         result = db.update_user(
             uuid=uuid,
-            delta=data.get('delta', 0)
+            delta=delta,
+            area=area
         )
+        old_area:str = result.get('old_area',"")
+        if old_area != "":
+            send_update(user={'uuid':uuid},method='delete',area=result.get('old_area'))
+            send_update(jsonify(result).get_json(),'create',area)
+        else:
+            send_update(jsonify(result).get_json(),'update',result.get('area'))
+        print(jsonify(result).get_json())
     return jsonify(result), 200 if result else 404
 
 
-@server.route('/waste_bins', methods=['GET'])
-@accept_fallback
-def find_all_waste_bins():
-    result = db.find_all_waste_bins()
-    return jsonify(result), 200 if result else 404
-
-
-@find_all_waste_bins.support('text/html')
-def find_all_waste_bins_html():
-    result = db.find_all_waste_bins()
-    return render_template('table_collection.html', title='Waste bins', name='waste_bins', collection=result)
-
-
-@server.route('/waste_bins/<string:uuid>', methods=['GET'])
-def find_waste_bin(uuid):
-    result = db.find_waste_bin(uuid)
-    return jsonify(result), 200 if result else 404
-
-
-@server.route('/waste_bins/<string:uuid>', methods=['PUT', 'PATCH'])
-def update_waste_bin(uuid):
-    result = None
-    if data := request.json:
-        result = db.update_waste_bin(
-            uuid=uuid,
-            fill_level=data.get('fill_level'),
-        )
-    return jsonify(result), 200 if result else 404
-
-
-# TODO: remove this before delivery
 @server.route('/users/<string:uuid>', methods=['POST'])
 def create_user(uuid):
     result = None
     if find_user(uuid)[1] == 404:
-        result = db.insert_user(uuid)
+        if data := request.json:
+            area:str = data.get('area',"")
+            result = db.insert_user(uuid, area=area)
+            send_update(jsonify(result).get_json(),'create',area)
     return jsonify(result), 201 if result else 409
 
 
-# TODO: remove this before delivery
 @server.route('/users/<string:uuid>', methods=['DELETE'])
 def remove_user(uuid):
     result = None
     if find_user(uuid)[1] == 200:
         result = db.delete_user(uuid)
+        send_update(user={'uuid':uuid},method='delete',area=result.get('area'))
     return jsonify(result), 200 if result else 404
+
+
+def send_update(user, method, area):
+    data:dict={
+        "method":method,
+        "user":user
+    }
+    publish.single(topic=area,payload=str(data),hostname="mosquitto",port=1883, keepalive=1)

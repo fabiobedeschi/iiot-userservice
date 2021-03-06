@@ -54,17 +54,40 @@ class Database:
         values = {'uuid': uuid}
         return self._execute_query(sql, values)
 
-    def update_user(self, uuid, delta) -> RealDictRow:
+    def find_user_by_area(self, area) -> RealDictRow:
         sql = '''
-            UPDATE users
-            SET delta = delta + %(delta)s, updated_at = NOW()
-            WHERE uuid = %(uuid)s
-            RETURNING *
+            SELECT * FROM users
+            WHERE area = %(area)s
         '''
-        values = {
-            'uuid': uuid,
-            'delta': delta
-        }
+        values = {'area':area}
+        return self._execute_query(sql,values)
+
+    def update_user(self, uuid, delta, area) -> RealDictRow:
+        var_list:list=['''
+            UPDATE users
+            ''']
+        var_list+='SET '
+        values = {'uuid':uuid}
+        if area !="":
+            var_list+="area = %(area)s, "
+            values['area']=area
+        if int(delta) >= 0:
+            var_list+="delta = %(delta)s, "
+            values['delta']=delta
+        
+        var_list+="updated_at = NOW() "
+        var_list+='''
+            WHERE uuid = %(uuid)s
+        '''
+        if area!="":
+            var_list+='''
+                RETURNING uuid, delta, area, created_at, updated_at, (
+                    select area from users where uuid = %(uuid)s
+                ) as old_area;
+            '''
+        else:
+            var_list+="RETURNING *"
+        sql:str = ''.join(var_list)
         return self._execute_query(sql, values)
 
     def find_all_waste_bins(self) -> [RealDictRow]:
@@ -94,15 +117,16 @@ class Database:
         }
         return self._execute_query(sql, values)
 
-    def insert_user(self, uuid, delta=0) -> RealDictRow:
+    def insert_user(self, uuid, delta=0, area="") -> RealDictRow:
         sql = '''
-            INSERT INTO users (uuid, delta)
-            VALUES (%(uuid)s, %(delta)s)
+            INSERT INTO users (uuid, delta, area)
+            VALUES (%(uuid)s, %(delta)s, %(area)s)
             RETURNING *
         '''
         values = {
             'uuid': uuid,
-            'delta': delta
+            'delta': delta,
+            'area': area
         }
         return self._execute_query(sql, values)
 

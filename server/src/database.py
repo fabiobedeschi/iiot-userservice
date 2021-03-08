@@ -1,6 +1,8 @@
 from logging import getLogger
 from os import getenv
 
+from typing import List
+
 from psycopg2 import connect, Error
 from psycopg2.extras import RealDictCursor, RealDictRow
 
@@ -54,16 +56,16 @@ class Database:
         values = {'uuid': uuid}
         return self._execute_query(sql, values)
 
-    def find_user_by_area(self, area) -> RealDictRow:
+    def find_user_by_area(self, area) -> List[RealDictRow]:
         sql = '''
             SELECT * FROM users
             WHERE area = %(area)s
         '''
         values = {'area': area}
-        return self._execute_query(sql, values)
+        return self._execute_query(sql, values, fetch_all=True)
 
     def update_user(self, uuid, delta, area) -> RealDictRow:
-        var_list: list = ['''
+        var_list = ['''
             UPDATE users
             ''']
         var_list += 'SET '
@@ -87,10 +89,10 @@ class Database:
             '''
         else:
             var_list += "RETURNING *"
-        sql: str = ''.join(var_list)
+        sql = ''.join(var_list)
         return self._execute_query(sql, values)
 
-    def find_all_waste_bins(self) -> [RealDictRow]:
+    def find_all_waste_bins(self) -> List[RealDictRow]:
         sql = '''
             SELECT * FROM waste_bins
         '''

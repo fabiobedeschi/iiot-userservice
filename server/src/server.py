@@ -22,29 +22,20 @@ def before_request():
         db = Database()
 
 
-@server.route('/')
-@accept('text/html')
-def root_page():
-    return render_template('root.html')
-
-
 @server.route('/users', methods=['GET'])
-@accept_fallback
 def find_all_users():
-    result = db.find_all_users()
+    result = None
+    area:str = request.args.get('area','')
+    if area == '':
+        result = db.find_all_users()
+    else:
+        result = db.find_user_by_area(area)
     return jsonify(result), 200 if result else 404
 
 
 @server.route('/users/<string:uuid>', methods=['GET'])
 def find_user(uuid):
     result = db.find_user(uuid)
-    return jsonify(result), 200 if result else 404
-
-
-@server.route('/users/<string:area>', methods=['GET'])
-@accept_fallback
-def find_user_by_area(area):
-    result = db.find_user_by_area(area)
     return jsonify(result), 200 if result else 404
 
 

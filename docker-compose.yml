@@ -10,11 +10,13 @@ services:
     ports:
       - 5432:5432
 
-  http_server:
+  server:
     depends_on:
       - db
+      - mosquitto
+    env_file: .env
     build:
-      context: ./http_server
+      context: ./server
     ports:
       - 80:80
 
@@ -24,11 +26,3 @@ services:
     env_file: .env
     ports:
       - 1884:1883
-
-  mqtt:
-    depends_on:
-      - db
-      - mosquitto
-    env_file: .env
-    build:
-      context: ./mqtt

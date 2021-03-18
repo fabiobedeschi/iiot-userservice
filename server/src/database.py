@@ -42,7 +42,7 @@ class Database:
                 self.connection.rollback()
                 raise e
 
-    def find_all_users(self) -> [RealDictRow]:
+    def find_all_users(self) -> List[RealDictRow]:
         sql = '''
             SELECT * FROM users
         '''
@@ -90,33 +90,6 @@ class Database:
         else:
             var_list += "RETURNING *"
         sql = ''.join(var_list)
-        return self._execute_query(sql, values)
-
-    def find_all_waste_bins(self) -> List[RealDictRow]:
-        sql = '''
-            SELECT * FROM waste_bins
-        '''
-        return self._execute_query(sql, fetch_all=True)
-
-    def find_waste_bin(self, uuid) -> RealDictRow:
-        sql = '''
-            SELECT * FROM waste_bins
-            WHERE uuid = %(uuid)s
-        '''
-        values = {'uuid': uuid}
-        return self._execute_query(sql, values)
-
-    def update_waste_bin(self, uuid, fill_level) -> RealDictRow:
-        sql = '''
-            UPDATE waste_bins
-            SET fill_level = %(fill_level)s, updated_at = NOW()
-            WHERE uuid = %(uuid)s
-            RETURNING *
-        '''
-        values = {
-            'uuid': uuid,
-            'fill_level': fill_level
-        }
         return self._execute_query(sql, values)
 
     def insert_user(self, uuid, delta=0, area="") -> RealDictRow:

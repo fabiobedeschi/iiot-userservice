@@ -1,6 +1,5 @@
 from logging import getLogger
 from os import getenv
-
 from typing import List
 
 from psycopg2 import connect, Error
@@ -64,37 +63,28 @@ class Database:
         values = {'area': area}
         return self._execute_query(sql, values, fetch_all=True)
 
-    def update_user(self, uuid, delta, area) -> RealDictRow:
-        var_list = ['''
-            UPDATE users
-            ''']
-        var_list += 'SET '
-        values = {'uuid': uuid}
-        if area != "":
-            var_list += "area = %(area)s, "
-            values['area'] = area
-        if int(delta) >= 0:
-            var_list += "delta = %(delta)s, "
-            values['delta'] = delta
-
-        var_list += "updated_at = NOW() "
-        var_list += '''
-            WHERE uuid = %(uuid)s
+    def update_user(self, uuid, delta=None, area=None) -> RealDictRow:
+        sql = 'UPDATE users SET update_at = NOW() '
+        if area is not None:
+            sql += ', area = %(area)s '
+        if delta is not None:
+            sql += ', delta = %(delta)s '
+        sql += 'WHERE uuid = %(uuid) '
+        sql += '''
+            RETURNING *, (
+                SELECT area FROM users WHERE uuid = %(uuid)s
+            ) AS old_area
         '''
-        if area != "":
-            var_list += '''
-                RETURNING uuid, delta, area, created_at, updated_at, (
-                    select area from users where uuid = %(uuid)s
-                ) as old_area;
-            '''
-        else:
-            var_list += "RETURNING *"
-        sql = ''.join(var_list)
+        values = {
+            'uuid': uuid,
+            'delta': delta,
+            'area': area
+        }
         return self._execute_query(sql, values)
 
-    def insert_user(self, uuid, delta=0, area="") -> RealDictRow:
+    def insert_user(self, uuid, delta=0, area='') -> RealDictRow:
         sql = '''
-            INSERT INTO users (uuid, delta, area)
+            INSERT INTO users(uuid, delta, area)
             VALUES (%(uuid)s, %(delta)s, %(area)s)
             RETURNING *
         '''

@@ -1,7 +1,8 @@
 from typing import Optional
 
-from flask import Blueprint, jsonify, render_template, request
-from flask_accept import accept, accept_fallback
+from flask import Blueprint, jsonify, request
+from paho.mqtt import publish
+from json import dumps
 
 from .database import Database
 
@@ -10,9 +11,6 @@ server = Blueprint('server', __name__)
 
 # Global variables
 db: Optional[Database] = None
-
-# Mqtt Client
-from paho.mqtt import publish
 
 
 @server.before_request
@@ -24,12 +22,11 @@ def before_request():
 
 @server.route('/users', methods=['GET'])
 def find_all_users():
-    result = None
-    area:str = request.args.get('area','')
+    area = request.args.get('area', '')
     if area == '':
         result = db.find_all_users()
     else:
-        result = db.find_user_by_area(area)
+        result = db.find_users_by_area(area)
     return jsonify(result), 200 if result else 404
 
 
@@ -43,20 +40,19 @@ def find_user(uuid):
 def update_user(uuid):
     result = None
     if data := request.json:
-        delta: int = data.get('delta', -1000)
-        area: str = data.get('area', "")
+        delta = data.get('delta', -1000)
+        area = data.get('area', '')
         result = db.update_user(
             uuid=uuid,
             delta=delta,
             area=area
         )
-        old_area: str = result.get('old_area', "")
-        if old_area != "":
-            send_update(user={'uuid': uuid}, method='delete', area=result.get('old_area'))
+        old_area = result.get('old_area', '')
+        if old_area != '':
+            send_update(user={'uuid': uuid}, action='delete', area=result.get('old_area'))
             send_update(jsonify(result).get_json(), 'create', area)
         else:
             send_update(jsonify(result).get_json(), 'update', result.get('area'))
-        print(jsonify(result).get_json())
     return jsonify(result), 200 if result else 404
 
 
@@ -65,7 +61,7 @@ def create_user(uuid):
     result = None
     if find_user(uuid)[1] == 404:
         if data := request.json:
-            area: str = data.get('area', "")
+            area = data.get('area', '')
             result = db.insert_user(uuid, area=area)
             send_update(jsonify(result).get_json(), 'create', area)
     return jsonify(result), 201 if result else 409
@@ -76,13 +72,13 @@ def remove_user(uuid):
     result = None
     if find_user(uuid)[1] == 200:
         result = db.delete_user(uuid)
-        send_update(user={'uuid': uuid}, method='delete', area=result.get('area'))
+        send_update(user={'uuid': uuid}, action='delete', area=result.get('area'))
     return jsonify(result), 200 if result else 404
 
 
-def send_update(user, method, area):
+def send_update(user, action, area):
     data = {
-        "method": method,
-        "user": user
+        'action': action,
+        'user': user
     }
-    publish.single(topic=area, payload=str(data), hostname="mosquitto", port=1883, keepalive=1)
+    publish.single(topic=area, payload=dumps(data), hostname='mosquitto', port=1883, keepalive=1)

@@ -56,7 +56,7 @@ class Database:
         values = {'uuid': uuid}
         return self._execute_query(sql, values)
 
-    def find_user_by_area(self, area) -> List[RealDictRow]:
+    def find_users_by_area(self, area) -> List[RealDictRow]:
         sql = '''
             SELECT * FROM users
             WHERE area = %(area)s

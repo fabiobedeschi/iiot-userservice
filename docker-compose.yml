@@ -25,4 +25,4 @@ services:
       context: ./mosquitto
     env_file: .env
     ports:
-      - 1884:1883
+      - 1883:1883

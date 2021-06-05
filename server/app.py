@@ -1,10 +1,10 @@
 from flask import Flask
 
-from src.server import server
+from .src.server import server_blueprint
 
 # Init Flask application
 app = Flask(__name__)
-app.register_blueprint(server)
+app.register_blueprint(server_blueprint)
 
 # Set flask app configurations
 app.config['JSON_SORT_KEYS'] = False

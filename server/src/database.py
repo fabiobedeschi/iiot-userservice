@@ -1,3 +1,4 @@
+from enum import Enum
 from logging import getLogger
 from os import getenv
 from typing import List
@@ -6,6 +7,12 @@ from psycopg2 import connect, Error
 from psycopg2.extras import RealDictCursor, RealDictRow
 
 logger = getLogger()
+
+
+class Fetch(Enum):
+    NONE = 0
+    ONE = 1
+    ALL = -1
 
 
 class Database:
@@ -28,11 +35,16 @@ class Database:
     def _open_cursor(self):
         return self.connection.cursor(cursor_factory=RealDictCursor)
 
-    def _execute_query(self, sql, values=None, fetch_all=False):
+    def _execute_query(self, sql, values=None, fetch: Fetch = Fetch.ONE):
         with self._open_cursor() as cursor:
             try:
                 cursor.execute(sql, values)
-                result = cursor.fetchall() if fetch_all else cursor.fetchone()
+                if fetch == Fetch.NONE:
+                    result = None
+                elif fetch == Fetch.ONE:
+                    result = cursor.fetchone()
+                elif fetch == Fetch.ALL:
+                    result = cursor.fetchall()
                 self.connection.commit()
                 return result
 
@@ -45,7 +57,7 @@ class Database:
         sql = '''
             SELECT * FROM users
         '''
-        return self._execute_query(sql, fetch_all=True)
+        return self._execute_query(sql, fetch=Fetch.ALL)
 
     def find_user(self, uuid) -> RealDictRow:
         sql = '''
@@ -61,15 +73,15 @@ class Database:
             WHERE area = %(area)s
         '''
         values = {'area': area}
-        return self._execute_query(sql, values, fetch_all=True)
+        return self._execute_query(sql, values, fetch=Fetch.ALL)
 
     def update_user(self, uuid, delta=None, area=None) -> RealDictRow:
-        sql = 'UPDATE users SET update_at = NOW() '
+        sql = 'UPDATE users SET updated_at = NOW() '
         if area is not None:
             sql += ', area = %(area)s '
         if delta is not None:
             sql += ', delta = %(delta)s '
-        sql += 'WHERE uuid = %(uuid) '
+        sql += 'WHERE uuid = %(uuid)s '
         sql += '''
             RETURNING *, (
                 SELECT area FROM users WHERE uuid = %(uuid)s
@@ -82,7 +94,9 @@ class Database:
         }
         return self._execute_query(sql, values)
 
-    def insert_user(self, uuid, delta=0, area='') -> RealDictRow:
+    def insert_user(self, uuid, delta=None, area=None) -> RealDictRow:
+        delta = delta or 0
+        area = area or ''
         sql = '''
             INSERT INTO users(uuid, delta, area)
             VALUES (%(uuid)s, %(delta)s, %(area)s)

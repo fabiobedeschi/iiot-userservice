@@ -4,9 +4,9 @@ EXPOSE 80
 
 WORKDIR /home/root
 
-COPY . ./
+COPY . ./server
 
 RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+RUN pip install -r server/requirements.txt
 
-CMD ["python", "-um", "app"]
+CMD ["python", "-um", "server.app"]

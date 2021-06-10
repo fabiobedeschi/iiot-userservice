@@ -49,11 +49,15 @@ class UserServer:
         if result:
             if self.send_updates:
                 old_area = result.get('old_area')
+                user_data = {
+                    'uuid': result['uuid'],
+                    'delta': result['delta']
+                }
                 if old_area:
-                    send_update(user=result, action='delete', area=old_area)
-                    send_update(user=result, action='create', area=area)
+                    send_update(user=user_data, action='delete', area=old_area)
+                    send_update(user=user_data, action='create', area=area)
                 else:
-                    send_update(user=result, action='update', area=area)
+                    send_update(user=user_data, action='update', area=area)
             return result, 200
         else:
             return None, 404
@@ -65,7 +69,11 @@ class UserServer:
         if not self.db.find_user(uuid):
             result = self.db.insert_user(uuid=uuid, delta=delta, area=area)
             if self.send_updates:
-                send_update(user=result, action='create', area=area)
+                user_data = {
+                    'uuid': result['uuid'],
+                    'delta': result['delta']
+                }
+                send_update(user=user_data, action='create', area=area)
             return result, 201
         else:
             return None, 409
@@ -74,7 +82,11 @@ class UserServer:
         if self.db.find_user(uuid):
             result = self.db.delete_user(uuid=uuid)
             if self.send_updates:
-                send_update(user=result, action='delete', area=result.get('area'))
+                user_data = {
+                    'uuid': result['uuid'],
+                    'delta': result['delta']
+                }
+                send_update(user=user_data, action='delete', area=result.get('area'))
             return result, 200
         else:
             return None, 404

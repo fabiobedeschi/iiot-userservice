@@ -28,6 +28,7 @@ services:
       - "${BROKER_PORT}:1884"
 
   subscriber:
+    env_file: .env
     depends_on:
       - db
       - mosquitto

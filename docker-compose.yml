@@ -8,7 +8,7 @@ services:
     volumes:
       - ./db/.dbdata:/var/lib/postgresql/data
     ports:
-      - 5432:5432
+      - "${POSTGRES_PORT}:5432"
 
   server:
     depends_on:
@@ -18,11 +18,18 @@ services:
     build:
       context: ./server
     ports:
-      - 8080:80
+      - "${USERSERVICE_PORT}:80"
 
   mosquitto:
     build:
       context: ./mosquitto
     env_file: .env
     ports:
-      - 1884:1884
+      - "${BROKER_PORT}:1884"
+
+  subscriber:
+    depends_on:
+      - db
+      - mosquitto
+    build:
+      context: ./subscriber

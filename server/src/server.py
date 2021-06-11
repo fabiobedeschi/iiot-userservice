@@ -13,8 +13,8 @@ def send_update(user, action, area):
     publish.single(
         topic=area,
         payload=dumps(data),
-        hostname='mosquitto',
-        port=1884,
+        hostname=getenv('BROKER_HOST', 'mosquitto'),
+        port=int(getenv('BROKER_PORT', 1884)),
         keepalive=1
     )
 

@@ -1,0 +1,3 @@
+paho-mqtt==1.5.1
+psycopg2==2.8.6
+ujson==4.0.2

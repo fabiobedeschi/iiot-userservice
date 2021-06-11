@@ -14,7 +14,7 @@ def send_update(user, action, area):
         topic=area,
         payload=dumps(data),
         hostname='mosquitto',
-        port=1883,
+        port=1884,
         keepalive=1
     )
 
@@ -53,11 +53,11 @@ class UserServer:
                     'uuid': result['uuid'],
                     'delta': result['delta']
                 }
-                if old_area:
+                if area is not None and old_area != area:
                     send_update(user=user_data, action='delete', area=old_area)
                     send_update(user=user_data, action='create', area=area)
                 else:
-                    send_update(user=user_data, action='update', area=area)
+                    send_update(user=user_data, action='update', area=old_area)
             return result, 200
         else:
             return None, 404
